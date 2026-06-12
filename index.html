@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipGIF — Free Video to GIF Converter (No Upload, No Watermark)</title>
+<meta name="description" content="Turn videos into GIFs for free, right in your browser. Your video never leaves your device — no upload, no watermark, no signup. Trim, resize, pick FPS, download.">
+<link rel="canonical" href="https://robin0725.github.io/clipgif/">
+<meta property="og:title" content="ClipGIF — Free Video to GIF Converter (No Upload, No Watermark)">
+<meta property="og:description" content="Turn videos into GIFs for free, right in your browser. Your video never leaves your device — no upload, no watermark, no signup.">
+<meta property="og:url" content="https://robin0725.github.io/clipgif/">
+<meta property="og:type" content="website">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+<style>
+  :root {
+    --bg: #0e1118;
+    --panel: #171c28;
+    --panel2: #1f2535;
+    --border: #2b3349;
+    --text: #ecf0f8;
+    --muted: #8e98ad;
+    --accent: #f472b6;
+    --accent-dark: #ec4899;
+    --accent-ink: #2b0a1c;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  header {
+    padding: 16px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .logo { font-weight: 800; font-size: 19px; }
+  .logo span { color: var(--accent); }
+  .pro-pill {
+    background: rgba(244,114,182,.1);
+    border: 1px solid rgba(244,114,182,.4);
+    color: var(--accent);
+    padding: 7px 14px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .pro-pill:hover { background: rgba(244,114,182,.18); }
+  .hero { text-align: center; padding: 44px 20px 10px; }
+  .hero h1 { font-size: clamp(26px, 4.5vw, 42px); letter-spacing: -.8px; line-height: 1.15; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero > p { color: var(--muted); max-width: 640px; margin: 14px auto 0; font-size: 16px; line-height: 1.65; }
+  .hero > p b { color: var(--text); }
+  .app {
+    display: flex;
+    gap: 24px;
+    max-width: 1020px;
+    margin: 36px auto 50px;
+    padding: 0 20px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .controls {
+    flex: 1 1 460px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    min-width: 300px;
+  }
+  .preview {
+    flex: 1 1 320px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    text-align: center;
+    min-width: 280px;
+  }
+  .drop {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 42px 18px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop.over, .drop:hover { border-color: var(--accent); background: rgba(244,114,182,.05); }
+  .drop .big { font-size: 34px; }
+  .drop p { margin-top: 10px; font-size: 15px; line-height: 1.6; }
+  .drop p b { color: var(--text); }
+  .drop small { display: block; margin-top: 8px; font-size: 12.5px; }
+  video {
+    width: 100%;
+    max-height: 320px;
+    border-radius: 12px;
+    background: #000;
+    display: block;
+  }
+  .filemeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 16px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .filemeta .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+  .linkbtn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+  .linkbtn:hover { text-decoration: underline; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px; }
+  .field input[type=number], .field select {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 11px 13px;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 420px) { .grid3 { grid-template-columns: 1fr; } }
+  .playhead {
+    margin-top: 6px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .playhead:hover { border-color: var(--accent); color: var(--text); }
+  .clipinfo {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 2px 0 14px;
+    line-height: 1.6;
+  }
+  .clipinfo b { color: var(--text); }
+  .warn {
+    background: rgba(251,191,36,.08);
+    border: 1px solid rgba(251,191,36,.35);
+    color: var(--warn);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .errbox {
+    background: rgba(248,113,113,.08);
+    border: 1px solid rgba(248,113,113,.4);
+    color: #f87171;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .cta {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: .2px;
+  }
+  .cta:hover:not(:disabled) { background: var(--accent-dark); }
+  .cta:disabled { opacity: .45; cursor: not-allowed; }
+  .progresswrap { margin-top: 16px; text-align: left; }
+  .progresslabel { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .progressbar {
+    height: 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progressbar > div {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width .15s linear;
+  }
+  .resultimg {
+    max-width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: block;
+    margin: 0 auto;
+  }
+  .resultmeta { margin: 12px 0 4px; font-size: 14px; color: var(--muted); }
+  .resultmeta b { color: var(--text); }
+  .dlbtn {
+    display: inline-block;
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    padding: 13px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: none;
+    margin-top: 10px;
+  }
+  .dlbtn:hover { background: var(--accent-dark); }
+  .placeholder { color: var(--muted); font-size: 14px; line-height: 1.7; padding: 36px 10px; }
+  .placeholder .big { font-size: 32px; display: block; margin-bottom: 10px; }
+  .promise { margin-top: 16px; font-size: 13px; color: var(--muted); line-height: 1.6; text-align: left; }
+  .promise b { color: var(--accent); }
+  .content { max-width: 760px; margin: 0 auto; padding: 10px 20px 70px; }
+  .content h2 { font-size: 22px; margin: 36px 0 12px; letter-spacing: -.3px; }
+  .content h3 { font-size: 16px; margin: 22px 0 6px; color: var(--text); }
+  .content p, .content li { color: var(--muted); font-size: 15px; line-height: 1.78; }
+  .content ul { padding-left: 22px; }
+  .callout {
+    background: rgba(244,114,182,.07);
+    border: 1px solid rgba(244,114,182,.3);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 16px;
+  }
+  .callout p { color: var(--text); }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 30px; max-width: 460px; margin: 20px; }
+  .modal h3 { margin-bottom: 12px; }
+  .modal p, .modal li { color: var(--muted); font-size: 14px; line-height: 1.75; }
+  .modal ul { padding-left: 20px; margin: 10px 0 16px; }
+  .modal .price { color: var(--text); font-size: 15px; }
+  .modal .price b { color: var(--accent); }
+  .modal button { background: var(--accent); color: var(--accent-ink); border: none; padding: 10px 24px; border-radius: 9px; font-weight: 700; cursor: pointer; }
+  footer { border-top: 1px solid var(--border); padding: 22px 28px 28px; color: var(--muted); font-size: 13px; line-height: 1.9; }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Clip<span>GIF</span></div>
+  <button class="pro-pill" onclick="openModal()">✨ Pro — $9 lifetime, coming soon</button>
+</header>
+
+<div class="hero">
+  <h1>Turn videos into GIFs.<br><em>Free, private, in your browser.</em></h1>
+  <p><b>Your video never leaves your device</b> — everything runs locally. No upload, no watermark, no signup. Part of a family of tools you buy once and own forever — never a subscription.</p>
+</div>
+
+<div class="app">
+  <div class="controls">
+
+    <div class="drop" id="drop">
+      <div class="big">🎬</div>
+      <p><b>Drop a video here</b> or click to choose a file</p>
+      <small>MP4, WebM or MOV — processed on this device, never uploaded</small>
+    </div>
+    <input type="file" id="file" accept="video/mp4,video/webm,video/quicktime,video/*,.mp4,.webm,.mov" hidden>
+
+    <div id="editor" class="hidden">
+      <video id="video" controls playsinline muted></video>
+      <div class="filemeta">
+        <span class="name" id="filename"></span>
+        <button class="linkbtn" id="changefile">Choose a different video</button>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>Start time (s)</label>
+          <input type="number" id="start" min="0" step="0.1" value="0">
+          <button class="playhead" data-target="start">⟸ Set from playhead</button>
+        </div>
+        <div class="field">
+          <label>End time (s)</label>
+          <input type="number" id="end" min="0" step="0.1" value="5">
+          <button class="playhead" data-target="end">⟸ Set from playhead</button>
+        </div>
+      </div>
+
+      <p class="clipinfo" id="clipinfo"></p>
+      <div class="warn hidden" id="longwarn">⚠️ Clips over 30 seconds make very large GIFs and can be slow to encode. It will still work — but consider trimming, lowering FPS, or picking a smaller width.</div>
+
+      <div class="grid3">
+        <div class="field">
+          <label>Width</label>
+          <select id="width">
+            <option value="320">320 px</option>
+            <option value="480" selected>480 px</option>
+            <option value="640">640 px</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>FPS</label>
+          <select id="fps">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="15">15</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Quality</label>
+          <select id="quality">
+            <option value="5">High</option>
+            <option value="10" selected>Medium</option>
+            <option value="20">Small file</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="errbox hidden" id="errbox"></div>
+      <button class="cta" id="convert">Convert to GIF</button>
+    </div>
+    <div class="errbox hidden" id="loaderr"></div>
+  </div>
+
+  <div class="preview">
+    <div class="placeholder" id="placeholder"><span class="big">✨</span>Your GIF will appear here.<br>Pick a video, trim it, hit convert.</div>
+
+    <div class="progresswrap hidden" id="progress">
+      <div class="progresslabel" id="proglabel">Extracting frames… 0%</div>
+      <div class="progressbar"><div id="progfill"></div></div>
+    </div>
+
+    <div id="result" class="hidden">
+      <img class="resultimg" id="resultimg" alt="Converted GIF preview">
+      <p class="resultmeta">GIF ready — <b id="resultsize"></b> · <span id="resultdims"></span></p>
+      <a class="dlbtn" id="download" download="clip.gif">⬇ Download GIF</a>
+      <p class="resultmeta" style="font-size:13px">Tweak the settings on the left and convert again — no need to re-pick the file.</p>
+    </div>
+
+    <p class="promise"><b>Private by design:</b> conversion happens entirely in your browser tab. Nothing is uploaded, so nothing can be stored, watermarked, or held hostage behind a paywall.</p>
+  </div>
+</div>
+
+<div class="content">
+  <h2>Why convert video to GIF in the browser?</h2>
+  <p>Most online converters work by uploading your video to their servers. That means waiting for the upload, trusting a stranger with your screen recording or family clip, and usually getting a watermark or a "premium" nag in return. ClipGIF flips that: the conversion runs as code inside your own browser tab, on your own machine. Close the tab and every trace of your video is gone.</p>
+  <div class="callout">
+    <p><b>The anti-subscription promise.</b> ClipGIF is part of a small family of tools built on one idea: software you pay for once — or not at all — and own forever. The converter on this page is free, with no watermark and no limits we sneak in later. The upcoming Pro tier is a single $9 payment, not a recurring charge.</p>
+  </div>
+
+  <h2>FAQ</h2>
+
+  <h3>How do I convert a video to GIF for free?</h3>
+  <p>Drop your video on this page, set a start and end time, choose a size, and press Convert. The GIF is generated on your device and downloads instantly. No account, no payment, no watermark — the whole thing takes under a minute for short clips.</p>
+
+  <h3>Does ClipGIF upload my video?</h3>
+  <p>No. Your file is read directly by your browser using standard web APIs, and every frame is processed on your own machine. There is no server that receives your video — you can even load this page, disconnect from the internet, and the converter still works.</p>
+
+  <h3>Why is my GIF file so large?</h3>
+  <p>GIF is a 1980s format that stores every frame as a full image with at most 256 colors — it was never designed for video. File size grows with length, frame rate, and dimensions. To shrink a GIF: trim to the few seconds that matter, use 10 FPS or less, pick the 320 px width, and choose the "Small file" quality setting. A 5-second clip at 480 px / 10 FPS typically lands around 2–6 MB.</p>
+
+  <h3>What video formats are supported?</h3>
+  <p>Anything your browser can play: MP4 (H.264) and WebM work everywhere; MOV files usually work in Safari and Chrome if they contain H.264 video. If your file uses an unusual codec (e.g. HEVC on some browsers), the page will tell you — re-exporting as MP4 or WebM fixes it.</p>
+
+  <h3>Is there a watermark?</h3>
+  <p>No, and there never will be. The GIF you download contains only your frames. Watermarks are how upload-based converters push you toward a subscription; since ClipGIF runs on your device, we have no way — and no reason — to stamp anything on your file.</p>
+
+  <h3>How is this different from ezgif?</h3>
+  <p>ezgif is a capable, long-standing tool — but it works by uploading your video to its servers and the interface shows its age. ClipGIF does one job (video → GIF) with a modern interface and zero upload: faster for big files, private for sensitive ones. If you need advanced GIF surgery like frame-by-frame editing or effects, ezgif still has more knobs; if you just want a clean, private conversion, you are in the right place.</p>
+</div>
+
+<footer>
+  <div>Part of a family of one-time-purchase tools:
+    <a href="https://fillsign.app">FillSign</a> ·
+    <a href="https://robin0725.github.io/shotgloss/">ShotGloss</a> ·
+    <a href="https://robin0725.github.io/foreverqr/">ForeverQR</a> ·
+    <a href="https://robin0725.github.io/subkit/">SubKit</a> ·
+    <a href="https://robin0725.github.io/mailsig/">MailSig</a> ·
+    <a href="https://robin0725.github.io/rentslip/">RentSlip</a>
+  </div>
+  <div>© 2026 ClipGIF — videos converted in your browser. Nothing uploaded, nothing watermarked. · Contact: <a href="mailto:florianfouine470@gmail.com">florianfouine470@gmail.com</a></div>
+</footer>
+
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>✨ ClipGIF Pro — coming soon</h3>
+    <ul>
+      <li>HD exports (720p+ widths)</li>
+      <li>Longer clips without the size blow-up</li>
+      <li>Batch conversion — drop a folder, get GIFs</li>
+    </ul>
+    <p class="price"><b>$9, one-time, yours forever.</b> Not a subscription — we don't do those.</p>
+    <p style="margin-top:8px">Everything is free while we build Pro.</p>
+    <div style="text-align:right; margin-top:14px"><button onclick="closeModal()">Got it</button></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var GIF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
+var workerBlobUrl = null;
+
+var drop = document.getElementById('drop');
+var fileInput = document.getElementById('file');
+var editor = document.getElementById('editor');
+var video = document.getElementById('video');
+var filenameEl = document.getElementById('filename');
+var startInput = document.getElementById('start');
+var endInput = document.getElementById('end');
+var widthSel = document.getElementById('width');
+var fpsSel = document.getElementById('fps');
+var qualitySel = document.getElementById('quality');
+var clipinfo = document.getElementById('clipinfo');
+var longwarn = document.getElementById('longwarn');
+var errbox = document.getElementById('errbox');
+var loaderr = document.getElementById('loaderr');
+var convertBtn = document.getElementById('convert');
+var placeholder = document.getElementById('placeholder');
+var progressWrap = document.getElementById('progress');
+var progLabel = document.getElementById('proglabel');
+var progFill = document.getElementById('progfill');
+var resultBox = document.getElementById('result');
+var resultImg = document.getElementById('resultimg');
+var resultSize = document.getElementById('resultsize');
+var resultDims = document.getElementById('resultdims');
+var downloadLink = document.getElementById('download');
+
+var videoUrl = null;
+var gifUrl = null;
+var videoReady = false;
+var converting = false;
+
+// ---------- file loading ----------
+
+drop.addEventListener('click', function () { fileInput.click(); });
+document.getElementById('changefile').addEventListener('click', function () {
+  if (converting) return;
+  fileInput.click();
+});
+fileInput.addEventListener('change', function () {
+  if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+});
+
+['dragover', 'dragenter'].forEach(function (ev) {
+  document.body.addEventListener(ev, function (e) { e.preventDefault(); });
+  drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (ev) {
+  drop.addEventListener(ev, function () { drop.classList.remove('over'); });
+});
+document.body.addEventListener('drop', function (e) {
+  e.preventDefault();
+  if (converting) return;
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+
+function loadFile(file) {
+  hide(loaderr); hide(errbox);
+  if (file.type && file.type.indexOf('video') !== 0 && !/\.(mp4|webm|mov|m4v|ogv)$/i.test(file.name)) {
+    showError(loaderr, 'That does not look like a video file. Please pick an MP4, WebM, or MOV.');
+    return;
+  }
+  if (videoUrl) URL.revokeObjectURL(videoUrl);
+  videoReady = false;
+  videoUrl = URL.createObjectURL(file);
+  filenameEl.textContent = file.name + ' (' + humanSize(file.size) + ')';
+  video.src = videoUrl;
+  video.load();
+}
+
+video.addEventListener('loadedmetadata', function () {
+  if (!video.videoWidth || !video.videoHeight) {
+    showError(loaderr, 'This file has no readable video track in your browser. Try re-exporting it as MP4 (H.264) or WebM.');
+    return;
+  }
+  videoReady = true;
+  drop.classList.add('hidden');
+  editor.classList.remove('hidden');
+  startInput.value = '0';
+  startInput.max = video.duration.toFixed(1);
+  endInput.max = video.duration.toFixed(1);
+  endInput.value = Math.min(video.duration, 5).toFixed(1);
+  updateClipInfo();
+});
+
+video.addEventListener('error', function () {
+  if (!videoUrl) return;
+  videoReady = false;
+  showError(loaderr, 'Your browser could not decode this video (unsupported codec). MP4 with H.264, or WebM, works best - try re-exporting in one of those formats.');
+});
+
+// ---------- trim controls ----------
+
+document.querySelectorAll('.playhead').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    if (!videoReady) return;
+    var t = Math.round(video.currentTime * 10) / 10;
+    document.getElementById(btn.dataset.target).value = t.toFixed(1);
+    updateClipInfo();
+  });
+});
+
+[startInput, endInput, fpsSel, widthSel, qualitySel].forEach(function (el) {
+  el.addEventListener('input', updateClipInfo);
+  el.addEventListener('change', updateClipInfo);
+});
+
+function clipRange() {
+  var dur = videoReady ? video.duration : 0;
+  var start = clamp(parseFloat(startInput.value) || 0, 0, dur);
+  var end = clamp(parseFloat(endInput.value) || 0, 0, dur);
+  return { start: start, end: end, len: Math.max(0, end - start) };
+}
+
+function updateClipInfo() {
+  if (!videoReady) return;
+  var r = clipRange();
+  var fps = parseInt(fpsSel.value, 10);
+  var frames = Math.max(1, Math.round(r.len * fps));
+  if (r.len <= 0) {
+    clipinfo.innerHTML = '<b>End time must be after start time.</b>';
+  } else {
+    clipinfo.innerHTML = 'Clip length: <b>' + r.len.toFixed(1) + 's</b> &middot; about <b>' + frames + ' frames</b> at ' + fps + ' FPS';
+  }
+  toggle(longwarn, r.len > 30);
+  convertBtn.disabled = converting || r.len <= 0;
+}
+
+// ---------- conversion ----------
+
+convertBtn.addEventListener('click', convert);
+
+function getWorkerUrl() {
+  if (workerBlobUrl) return Promise.resolve(workerBlobUrl);
+  return fetch(GIF_WORKER_URL).then(function (res) {
+    if (!res.ok) throw new Error('worker fetch failed: ' + res.status);
+    return res.text();
+  }).then(function (code) {
+    workerBlobUrl = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }));
+    return workerBlobUrl;
+  });
+}
+
+function seekTo(t) {
+  return new Promise(function (resolve, reject) {
+    var timer = setTimeout(function () {
+      cleanup();
+      reject(new Error('seek timeout'));
+    }, 8000);
+    function onSeeked() { cleanup(); resolve(); }
+    function cleanup() {
+      clearTimeout(timer);
+      video.removeEventListener('seeked', onSeeked);
+    }
+    video.addEventListener('seeked', onSeeked);
+    video.currentTime = t;
+  });
+}
+
+async function convert() {
+  if (converting || !videoReady) return;
+  var r = clipRange();
+  if (r.len <= 0) return;
+
+  var fps = parseInt(fpsSel.value, 10);
+  var width = parseInt(widthSel.value, 10);
+  var quality = parseInt(qualitySel.value, 10);
+  var height = Math.max(2, Math.round(width * video.videoHeight / video.videoWidth));
+  var frameCount = Math.max(1, Math.round(r.len * fps));
+  var delay = Math.round(1000 / fps);
+
+  converting = true;
+  convertBtn.disabled = true;
+  convertBtn.textContent = 'Converting...';
+  hide(errbox); hide(resultBox); hide(placeholder);
+  show(progressWrap);
+  setProgress('Extracting frames... 0%', 0);
+
+  var resumeTime = video.currentTime;
+  video.pause();
+
+  try {
+    var workerUrl = await getWorkerUrl();
+
+    var gif = new GIF({
+      workers: 2,
+      quality: quality,
+      width: width,
+      height: height,
+      workerScript: workerUrl
+    });
+
+    var canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    var maxT = Math.max(0, video.duration - 0.05);
+    for (var i = 0; i < frameCount; i++) {
+      var t = Math.min(r.start + i / fps, maxT);
+      await seekTo(t);
+      ctx.drawImage(video, 0, 0, width, height);
+      gif.addFrame(ctx, { copy: true, delay: delay });
+      var pct = Math.round(((i + 1) / frameCount) * 100);
+      setProgress('Extracting frames... ' + pct + '%', pct);
+    }
+
+    setProgress('Encoding GIF... 0%', 0);
+
+    var blob = await new Promise(function (resolve, reject) {
+      gif.on('progress', function (p) {
+        var pct = Math.round(p * 100);
+        setProgress('Encoding GIF... ' + pct + '%', pct);
+      });
+      gif.on('finished', resolve);
+      gif.on('abort', function () { reject(new Error('encoding aborted')); });
+      try { gif.render(); } catch (e) { reject(e); }
+    });
+
+    if (gifUrl) URL.revokeObjectURL(gifUrl);
+    gifUrl = URL.createObjectURL(blob);
+    resultImg.src = gifUrl;
+    downloadLink.href = gifUrl;
+    resultSize.textContent = humanSize(blob.size);
+    resultDims.textContent = width + 'x' + height + ', ' + fps + ' FPS, ' + r.len.toFixed(1) + 's';
+    hide(progressWrap);
+    show(resultBox);
+  } catch (err) {
+    hide(progressWrap);
+    show(placeholder);
+    var msg = 'Conversion failed';
+    if (err && /seek timeout/.test(String(err.message))) {
+      msg = 'Conversion failed: the video could not be read frame by frame. This usually means the codec is only partially supported - try re-exporting as MP4 (H.264) or WebM.';
+    } else if (err && /worker fetch/.test(String(err.message))) {
+      msg = 'Conversion failed: the GIF encoder could not be loaded. Check your internet connection and reload the page.';
+    } else {
+      msg = 'Conversion failed: ' + (err && err.message ? err.message : 'unknown error') + '. If this keeps happening, try MP4 (H.264) or WebM.';
+    }
+    showError(errbox, msg);
+  } finally {
+    try { video.currentTime = resumeTime; } catch (e) { /* ignore */ }
+    converting = false;
+    convertBtn.textContent = 'Convert to GIF';
+    updateClipInfo();
+  }
+}
+
+// ---------- helpers ----------
+
+function setProgress(label, pct) {
+  progLabel.textContent = label;
+  progFill.style.width = pct + '%';
+}
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+function show(el) { el.classList.remove('hidden'); }
+function hide(el) { el.classList.add('hidden'); }
+function toggle(el, on) { el.classList.toggle('hidden', !on); }
+function showError(el, msg) { el.textContent = msg; show(el); }
+function openModal() { document.getElementById('modal').classList.add('open'); }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+</script>
+</body>
+</html>
